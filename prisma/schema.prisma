@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EducationLevel {
+  PRIMARY
+  JUNIOR
+}
+
+enum Role {
+  SUPER_ADMIN
+  HEADTEACHER
+  TEACHER
+  PARENT
+}
+
+model School {
+  id       String       @id @default(cuid())
+  name     String
+  code     String       @unique
+  learners Learner[]
+  staff    Staff[]
+  classes  ClassGroup[]
+  rooms    Room[]
+}
+
+model Learner {
+  id           String             @id @default(cuid())
+  upi          String             @unique
+  admissionNo  String             @unique
+  firstName    String
+  lastName     String
+  dob          DateTime
+  gender       String
+  level        EducationLevel
+  grade        Int
+  classGroupId String
+  classGroup   ClassGroup         @relation(fields: [classGroupId], references: [id])
+  guardians    Guardian[]
+  medicalNotes String?
+  specialNeeds String?
+  attendance   AttendanceRecord[]
+  assessments  AssessmentResult[]
+  schoolId     String
+  school       School             @relation(fields: [schoolId], references: [id])
+}
+
+model Guardian {
+  id        String  @id @default(cuid())
+  learnerId String
+  learner   Learner @relation(fields: [learnerId], references: [id])
+  name      String
+  relation  String
+  phone     String
+  email     String?
+  isPrimary Boolean @default(false)
+}
+
+model Staff {
+  id             String         @id @default(cuid())
+  staffNo        String         @unique
+  firstName      String
+  lastName       String
+  role           Role
+  subjects       StaffSubject[]
+  classTeacherOf String?
+  lessonLoad     Lesson[]
+  schoolId       String
+  school         School         @relation(fields: [schoolId], references: [id])
+}
+
+model ClassGroup {
+  id       String         @id @default(cuid())
+  name     String
+  grade    Int
+  level    EducationLevel
+  learners Learner[]
+  lessons  Lesson[]
+  schoolId String
+  school   School         @relation(fields: [schoolId], references: [id])
+}
+
+model Subject {
+  id            String         @id @default(cuid())
+  name          String
+  level         EducationLevel
+  weeklyLessons Int
+  requiresRoom  String?
+  isCore        Boolean        @default(true)
+  lessons       Lesson[]
+  staffSubjects StaffSubject[]
+}
+
+model StaffSubject {
+  id        String  @id @default(cuid())
+  staffId   String
+  staff     Staff   @relation(fields: [staffId], references: [id])
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id])
+}
+
+model Room {
+  id       String   @id @default(cuid())
+  name     String
+  type     String
+  schoolId String
+  school   School   @relation(fields: [schoolId], references: [id])
+  lessons  Lesson[]
+}
+
+model Lesson {
+  id           String     @id @default(cuid())
+  day          Int
+  period       Int
+  subjectId    String
+  subject      Subject    @relation(fields: [subjectId], references: [id])
+  staffId      String
+  staff        Staff      @relation(fields: [staffId], references: [id])
+  classGroupId String
+  classGroup   ClassGroup @relation(fields: [classGroupId], references: [id])
+  roomId       String?
+  room         Room?      @relation(fields: [roomId], references: [id])
+
+  @@unique([day, period, staffId])
+  @@unique([day, period, classGroupId])
+  @@unique([day, period, roomId])
+}
+
+model AssessmentResult {
+  id              String   @id @default(cuid())
+  learnerId       String
+  learner         Learner  @relation(fields: [learnerId], references: [id])
+  subjectId       String
+  strand          String
+  subStrand       String?
+  term            Int
+  type            String
+  competencyLevel String
+  score           Float?
+  remarks         String?
+}
+
+model AttendanceRecord {
+  id        String   @id @default(cuid())
+  learnerId String
+  learner   Learner  @relation(fields: [learnerId], references: [id])
+  date      DateTime
+  period    Int?
+  status    String
+}
